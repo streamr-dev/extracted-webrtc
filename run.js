@@ -41,7 +41,7 @@ setTimeout(() => {
             `--node-id=node-${i}`,
             '--report-interval=50000',
             '--publish-interval=10000',
-            '--metrics-file=metrics.json'
+            '--metrics-file=metrics'
         ]
 
         if (debug) {
