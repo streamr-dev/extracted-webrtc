@@ -16,7 +16,7 @@ let debug = false
 
 const productionEnv = Object.create(process.env)
 if (!productionEnv.DEBUG) {
-    productionEnv.DEBUG = '*,-dataChannel.onmessage:*'
+    productionEnv.DEBUG = '*'
 }
 productionEnv.checkUncaughtException = true
 

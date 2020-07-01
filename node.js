@@ -12,7 +12,7 @@ program
     .option('--node-id <node-id>', 'node-id', null)
     .option('--signaller <signaller>', 'signaller host info', 'ws://127.0.0.1:8080')
     .option('--stun-urls <stun-urls>', 'comma-separated URL(s) of STUN servers', 'stun:stun.l.google.com:19302')
-    .option('--publish-interval <publisher-interval>', 'interval in ms to publish', '500')
+    .option('--publish-interval <publisher-interval>', 'interval in ms to publish', '2000')
     .option('--report-interval <report-interval>', 'interval in ms to report', '30000')
     .option('--metrics-file <metrics-file>', 'metrics log file to use', null)
     .option('--log-to-file <logToFile>', 'output logs to file', 'false')
