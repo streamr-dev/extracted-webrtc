@@ -6,6 +6,10 @@ const program = require('commander')
 
 program
     .option('--nodes <nodes>', 'number of nodes', 10)
+    .option('--signaller <signaller>', 'signaller-address', 'ws://127.0.0.1:8080')
+    .option('--runSignaller <runSignaller>', 'enter anything to run signaller', undefined)
+    .option('--signallerAddress <signallerAddress>', 'signaller address to run', '127.0.0.1')
+    .option('--signallerPort <signallerPort>', 'signaller port to run', '8080')
     .option('--id <id>', 'node-id', 'node')
     .description('Run local WebRTC network')
     .parse(process.argv)
@@ -25,23 +29,26 @@ productionEnv.checkUncaughtException = true
 
 // create signaller
 const signaller = path.resolve('./signaller.js')
-let args = [signaller, '0.0.0.0', '8080']
+let args = [signaller, program.signallerAddress, program.signallerPort]
 
 if (process.env.NODE_DEBUG_OPTION !== undefined) {
     debug = true
     args.unshift('--inspect-brk=' + (startingDebugPort - 1))
 }
 
-spawn('node', args, {
-    env: productionEnv,
-    stdio: [process.stdin, process.stdout, process.stderr]
-})
+if (program.runSignaller) {
+    spawn('node', args, {
+        env: productionEnv,
+        stdio: [process.stdin, process.stdout, process.stderr]
+    })
+}
 
 setTimeout(() => {
     for (let i = 0; i < numberOfNodes; i++) {
         args = [
             path.resolve('./node.js'),
             `--node-id=${nodeId}-${i}`,
+            `--signaller=${program.signaller}`,
             '--report-interval=50000',
             '--publish-interval=10000',
             '--metrics-file=metrics'
