@@ -104,16 +104,16 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         }
     }
     connection.onconnectionstatechange = (event) => {
-        debug('onconnectionstatechange', nodeId, targetPeerId, connection.connectionState, event)
+        console.info('onconnectionstatechange', nodeId, targetPeerId, connection.connectionState, event)
     }
     connection.onsignalingstatechange = (event) => {
-        debug('onsignalingstatechange', nodeId, targetPeerId, connection.connectionState, event)
+        console.info('onsignalingstatechange', nodeId, targetPeerId, connection.connectionState, event)
     }
     connection.oniceconnectionstatechange = (event) => {
-        debug('oniceconnectionstatechange', nodeId, targetPeerId, event)
+        console.info('oniceconnectionstatechange', nodeId, targetPeerId, event)
     }
     connection.onicegatheringstatechange = (event) => {
-        debug('onicegatheringstatechange', nodeId, targetPeerId, event)
+        console.info('onicegatheringstatechange', nodeId, targetPeerId, event)
     }
     dataChannel.onopen = (event) => {
         debug('dataChannel.onOpen', nodeId, targetPeerId, event)
