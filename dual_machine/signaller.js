@@ -96,10 +96,9 @@ wss.on('connection', (ws, req) => {
         }
     })
 
-    if (neighbors[id]) {
-        ws.send(JSON.stringify({
-            connect: neighbors[id]
-        }))
-        console.info('Sent connect %s to %s', neighbors[id], id)
-    }
+    ws.send(JSON.stringify({
+        connect: neighbors[id]
+    }))
+    console.info('Sent connect %s to %s', neighbors[id], id)
+
 })
