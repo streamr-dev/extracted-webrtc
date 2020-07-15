@@ -90,15 +90,16 @@ wss.on('connection', (ws, req) => {
         if (neighbor.split('-')[0] === id.split('-')[0]) {
             return
         }
-        if (neighbors[neighbor] === '') {
+        if (neighbors[neighbor] === '' && !Object.values(neighbors).includes(id)) {
             neighbors[neighbor] = id
             neighbors[id] = neighbor
         }
     })
-
-    ws.send(JSON.stringify({
-        connect: neighbors[id]
-    }))
-    console.info('Sent connect %s to %s', neighbors[id], id)
-
+    console.log(neighbors)
+    if (neighbors[id]) {
+        ws.send(JSON.stringify({
+            connect: neighbors[id]
+        }))
+        console.info('Sent connect %s to %s', neighbors[id], id)
+    }
 })
