@@ -2,19 +2,10 @@ const WebSocket = require('ws')
 const url = require('url')
 const program = require('commander')
 
-const { logToFile } = require('../common')
-
 program
     .usage('<host> <port>')
-    .option('--log-to-file <logToFile>', 'output logs to file', 'false')
-    .option('--log-file <logFile>', 'name of log file', 'signaller.log')
     .description('Run example signaller')
     .parse(process.argv)
-
-
-if (program.logToFile === true || program.logToFile.toLowerCase() === 'true') {
-    logToFile(program.logFile, process, true)
-}
 
 if (program.args.length < 2) {
     program.outputHelp()
@@ -29,19 +20,20 @@ const wss = new WebSocket.Server({
     port
 })
 
-const idToWs = {}
+const nodeIdToWs = {}
+const connectionIdToNodeId = {}
 const neighbors = {}
 
 wss.on('connection', (ws, req) => {
     // Parse id
     const parsed = url.parse(req.url, true)
-    const {id} = parsed.query
-    if (id === undefined) {
+    const { nodeId } = parsed.query
+    if (nodeId === undefined) {
         ws.send(JSON.stringify({
             code: 'ERROR',
             errorCode: 'ID_NOT_GIVEN_IN_CONNECTION_URL'
         }))
-        ws.close(1000, 'parameter "id" not supplied in query string')
+        ws.close(1000, 'parameter "browserId" not supplied in query string')
         return
     }
 
@@ -59,47 +51,58 @@ wss.on('connection', (ws, req) => {
             return
         }
 
-        const {destination} = payload
-        if (!Object.keys(idToWs).includes(destination)) {
-            console.warn('Received message with unknown destination from %s: %s', id, destination)
-            ws.send(JSON.stringify({
-                code: 'ERROR',
-                errorCode: 'UNKNOWN_TARGET_PEER_ID',
-                destination
-            }))
-            return
-        }
+        if (payload.new) {
+            const newConnectionId = payload.new
+            connectionIdToNodeId[newConnectionId] = nodeId
+            neighbors[newConnectionId] = ''
 
-        idToWs[destination].send(message)
-        console.log('forwarded %s -> %s: %j', id, destination, payload)
+            Object.keys(neighbors).forEach((neighbor) => {
+                if (neighbor === newConnectionId) {
+                    return
+                }
+                if (neighbor.split('-')[0] === newConnectionId.split('-')[0]) {
+                    return
+                }
+                if (neighbors[neighbor] === '' && !Object.values(neighbors).includes(newConnectionId)) {
+                    neighbors[neighbor] = newConnectionId
+                    neighbors[newConnectionId] = neighbor
+                }
+            })
+            if (neighbors[newConnectionId]) {
+                ws.send(JSON.stringify({
+                    connId: newConnectionId,
+                    connect: neighbors[newConnectionId]
+                }))
+                console.info('Sent connect %s to %s', neighbors[newConnectionId], newConnectionId)
+            }
+
+        } else {
+            const {peerId, destination} = payload
+            if (!Object.keys(connectionIdToNodeId).includes(destination)) {
+                console.warn('Received message with unknown destination from %s: %s', peerId, destination)
+                ws.send(JSON.stringify({
+                    code: 'ERROR',
+                    errorCode: 'UNKNOWN_TARGET_PEER_ID',
+                    destination
+                }))
+                return
+            }
+            const destinationBrowser = connectionIdToNodeId[destination]
+            nodeIdToWs[destinationBrowser].send(message)
+            console.log('forwarded %s -> %s: %j', peerId, destination, payload)
+        }
     })
 
     ws.on('close', () => {
-        delete idToWs[id]
-        console.info('%s disconnected.', id)
+        delete nodeIdToWs[nodeId]
+        Object.keys(connectionIdToNodeId).forEach((nodeId) => {
+            if (connectionIdToNodeId[nodeId] === nodeId) {
+                delete connectionIdToNodeId[nodeId]
+            }
+        })
+        console.info('%s disconnected.', nodeIdToWs)
     })
 
-    idToWs[id] = ws
-    neighbors[id] = ''
-    console.info('%s connected.', id)
-
-    Object.keys(neighbors).forEach((neighbor) => {
-        if (neighbor === id) {
-            return
-        }
-        if (neighbor.split('-')[0] === id.split('-')[0]) {
-            return
-        }
-        if (neighbors[neighbor] === '' && !Object.values(neighbors).includes(id)) {
-            neighbors[neighbor] = id
-            neighbors[id] = neighbor
-        }
-    })
-    console.log(neighbors)
-    if (neighbors[id]) {
-        ws.send(JSON.stringify({
-            connect: neighbors[id]
-        }))
-        console.info('Sent connect %s to %s', neighbors[id], id)
-    }
+    nodeIdToWs[nodeId] = ws
+    console.info('%s connected.', nodeId)
 })
