@@ -212,59 +212,60 @@ ws.on('close', () => {
     process.exit(1)
 })
 
-setInterval(async () => {
-    console.info('Total messages received %d (%d)',
-        numOfMessagesReceived,
-        numOfMessagesReceived - lastReportedNumOfMessagesReceived)
-    console.info('Total bytes received %d (%s per second)',
-        numOfBytesReceived,
-        ((numOfBytesReceived - lastReportedNumofBytesReceived) / (reportInterval / 1000.0)).toFixed(2))
-    console.info('Mean latency %s ms per message (%s ms per message)',
-        (totalLatency / numOfMessagesReceived).toFixed(2),
-        ((totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)).toFixed(2))
-    console.info('Total messages sent %d (%d)',
-        numOfMessagesSent,
-        numOfMessagesSent - lastReportedNumOfMessagesSent)
-    console.info('Total bytes sent %d (%s per second)',
-        numOfBytesSent,
-        ((numOfBytesSent - lastReportedNumOfMessagesSent) / (reportInterval / 1000.0)).toFixed(2))
-    const connectionStats = await Promise.all(Object.values(connections).map((c) => c.getStats(null)))
-    logFileStream.write(JSON.stringify({
-        nodeId,
-        timestamp: Date.now(),
-        received: {
-            totalMessages: numOfMessagesReceived,
-            totalBytes: numOfBytesReceived,
-            newMessages: numOfMessagesReceived - lastReportedNumOfMessagesReceived,
-            newBytes: numOfBytesReceived - lastReportedNumofBytesReceived,
-            totalMeanLatency: totalLatency / numOfMessagesReceived,
-            newMeanLatency: (totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)
-        },
-        sent: {
-            totalMessages: numOfMessagesSent,
-            totalBytes: numOfBytesSent,
-            newMessages: numOfMessagesSent - lastReportedNumOfMessagesSent,
-            newBytes: numOfBytesSent - lastReportedNumofBytesSent,
-        },
-        neighbors: Object.keys(connections),
-        connections: {
-            total: Object.values(connections).length,
-            connectionStates: Object.values(connections).map((c) => c.connectionState),
-            iceConnectionStates: Object.values(connections).map((c) => c.iceConnectionState),
-            iceGatheringStates: Object.values(connections).map((c) => c.iceGatheringState),
-            signalingStates: Object.values(connections).map((c) => c.signalingState),
-            stats: connectionStats,
-        },
-        dataChannels: {
-            total: Object.values(dataChannels).length,
-            readyStates: Object.values(dataChannels).map((d) => d.readyState),
-            bufferedAmount: Object.values(dataChannels).map((d) => d.bufferedAmount)
-        }
-    }) + '\n')
 
-    lastReportedNumOfMessagesReceived = numOfMessagesReceived
-    lastReportedNumofBytesReceived = numOfBytesReceived
-    lastReportedNumOfMessagesSent = numOfMessagesSent
-    lastReportedNumofBytesSent = numOfBytesSent
-    lastReportedLatency = totalLatency
-}, reportInterval)
+// setInterval(async () => {
+//     console.info('Total messages received %d (%d)',
+//         numOfMessagesReceived,
+//         numOfMessagesReceived - lastReportedNumOfMessagesReceived)
+//     console.info('Total bytes received %d (%s per second)',
+//         numOfBytesReceived,
+//         ((numOfBytesReceived - lastReportedNumofBytesReceived) / (reportInterval / 1000.0)).toFixed(2))
+//     console.info('Mean latency %s ms per message (%s ms per message)',
+//         (totalLatency / numOfMessagesReceived).toFixed(2),
+//         ((totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)).toFixed(2))
+//     console.info('Total messages sent %d (%d)',
+//         numOfMessagesSent,
+//         numOfMessagesSent - lastReportedNumOfMessagesSent)
+//     console.info('Total bytes sent %d (%s per second)',
+//         numOfBytesSent,
+//         ((numOfBytesSent - lastReportedNumOfMessagesSent) / (reportInterval / 1000.0)).toFixed(2))
+//     const connectionStats = await Promise.all(Object.values(connections).map((c) => c.getStats(null)))
+//     logFileStream.write(JSON.stringify({
+//         nodeId,
+//         timestamp: Date.now(),
+//         received: {
+//             totalMessages: numOfMessagesReceived,
+//             totalBytes: numOfBytesReceived,
+//             newMessages: numOfMessagesReceived - lastReportedNumOfMessagesReceived,
+//             newBytes: numOfBytesReceived - lastReportedNumofBytesReceived,
+//             totalMeanLatency: totalLatency / numOfMessagesReceived,
+//             newMeanLatency: (totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)
+//         },
+//         sent: {
+//             totalMessages: numOfMessagesSent,
+//             totalBytes: numOfBytesSent,
+//             newMessages: numOfMessagesSent - lastReportedNumOfMessagesSent,
+//             newBytes: numOfBytesSent - lastReportedNumofBytesSent,
+//         },
+//         neighbors: Object.keys(connections),
+//         connections: {
+//             total: Object.values(connections).length,
+//             connectionStates: Object.values(connections).map((c) => c.connectionState),
+//             iceConnectionStates: Object.values(connections).map((c) => c.iceConnectionState),
+//             iceGatheringStates: Object.values(connections).map((c) => c.iceGatheringState),
+//             signalingStates: Object.values(connections).map((c) => c.signalingState),
+//             stats: connectionStats,
+//         },
+//         dataChannels: {
+//             total: Object.values(dataChannels).length,
+//             readyStates: Object.values(dataChannels).map((d) => d.readyState),
+//             bufferedAmount: Object.values(dataChannels).map((d) => d.bufferedAmount)
+//         }
+//     }) + '\n')
+//
+//     lastReportedNumOfMessagesReceived = numOfMessagesReceived
+//     lastReportedNumofBytesReceived = numOfBytesReceived
+//     lastReportedNumOfMessagesSent = numOfMessagesSent
+//     lastReportedNumofBytesSent = numOfBytesSent
+//     lastReportedLatency = totalLatency
+// }, reportInterval)

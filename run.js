@@ -6,11 +6,13 @@ const program = require('commander')
 
 program
     .option('--nodes <nodes>', 'number of nodes', 10)
+    .option('--log-to-file <logToFile>', 'output logs to files', 'false')
     .description('Run local WebRTC network')
     .parse(process.argv)
 
 const { nodes: numberOfNodes } = program
 const startingDebugPort = 9200
+const logToFile = program.logToFile
 
 let debug = false
 
@@ -22,7 +24,7 @@ productionEnv.checkUncaughtException = true
 
 // create signaller
 const signaller = path.resolve('./signaller.js')
-let args = [signaller, '0.0.0.0', '8080']
+let args = [signaller, '0.0.0.0', '8080', '--log-to-file', logToFile]
 
 if (process.env.NODE_DEBUG_OPTION !== undefined) {
     debug = true
@@ -41,7 +43,8 @@ setTimeout(() => {
             `--node-id=node-${i}`,
             '--report-interval=50000',
             '--publish-interval=10000',
-            '--metrics-file=metrics'
+            '--metrics-file=metrics',
+            `--log-to-file=${logToFile}`
         ]
 
         if (debug) {
