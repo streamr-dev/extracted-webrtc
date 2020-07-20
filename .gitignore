@@ -2,3 +2,4 @@ node.log
 signaller.log
 metrics
 node_modules
+.idea
