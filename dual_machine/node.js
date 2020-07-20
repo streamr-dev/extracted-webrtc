@@ -105,10 +105,12 @@ function setUpWebRtcConnection(targetPeerId, isOffering, connId) {
     }
 
     dataChannel.onopen = (event) => {
+        console.log('dataChannel.onOpen', nodeId, targetPeerId, event)
         peers[connId].readyChannels.add(dataChannel)
     }
 
     dataChannel.onclose = (event) => {
+        console.log('dataChannel.onClose', nodeId, targetPeerId, event)
         delete peers[connId].dataChannels[targetPeerId]
         peers[connId].readyChannels.delete(targetPeerId)
         peers[connId].connections[targetPeerId].close()
@@ -223,7 +225,6 @@ async function handleConnects() {
     for (let i = 0; i < connectionCount; i++) {
         const connId = nodeId + "-" + i
         try {
-            console.log(connId)
             addConnToSignaller(connId)
             peers[connId] = {
                 connections: {},

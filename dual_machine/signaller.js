@@ -77,9 +77,9 @@ wss.on('connection', (ws, req) => {
             }
 
         } else {
-            const {peerId, destination} = payload
+            const {source, destination} = payload
             if (!Object.keys(connectionIdToNodeId).includes(destination)) {
-                console.warn('Received message with unknown destination from %s: %s', peerId, destination)
+                console.warn('Received message with unknown destination from %s: %s', source, destination)
                 ws.send(JSON.stringify({
                     code: 'ERROR',
                     errorCode: 'UNKNOWN_TARGET_PEER_ID',
@@ -89,7 +89,7 @@ wss.on('connection', (ws, req) => {
             }
             const destinationBrowser = connectionIdToNodeId[destination]
             nodeIdToWs[destinationBrowser].send(message)
-            console.log('forwarded %s -> %s: %j', peerId, destination, payload)
+            console.log('forwarded %s -> %s: %j', source, destination, payload)
         }
     })
 

@@ -7,6 +7,7 @@ const program = require('commander')
 program
     .option('--nodes <nodes>', 'number of nodes', 10)
     .option('--signaller <signaller>', 'signaller-address', 'ws://127.0.0.1:8080')
+    .option('--log-to-file <logToFile>', 'output logs to files', 'false')
     .option('--runSignaller <runSignaller>', 'enter anything to run signaller', undefined)
     .option('--signallerAddress <signallerAddress>', 'signaller address to run', '127.0.0.1')
     .option('--signallerPort <signallerPort>', 'signaller port to run', '8080')
@@ -16,6 +17,7 @@ program
 
 const { nodes: numberOfNodes } = program
 const nodeId = program.id
+const logToFile = program.logToFile
 
 const startingDebugPort = 9200
 
@@ -44,10 +46,11 @@ if (program.runSignaller) {
 }
 
 setTimeout(() => {
-    for (let i = 0; i < numberOfNodes; i++) {
         args = [
             path.resolve('./node.js'),
-            `--node-id=${nodeId}-${i}`,
+            `--node-id=${nodeId}`,
+            `--connectionCount=${numberOfNodes}`,
+            `--log-to-file=${logToFile}`,
             `--signaller=${program.signaller}`,
             '--report-interval=50000',
             '--publish-interval=10000',
@@ -62,5 +65,4 @@ setTimeout(() => {
             env: productionEnv,
             stdio: [process.stdin, process.stdout, process.stderr]
         })
-    }
 }, 1000)
