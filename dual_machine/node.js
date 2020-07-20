@@ -91,6 +91,15 @@ function setUpWebRtcConnection(targetPeerId, isOffering, connId) {
         }
     }
 
+    connection.onicecandidate = (event) => {
+        if (event.candidate != null) {
+            sendWsMessage(JSON.stringify({
+                source: connId,
+                destination: targetPeerId,
+                candidate: event.candidate
+            }))
+        }
+    }
     connection.onconnectionstatechange = (event) => {
         console.log('onconnectionstatechange', connId, targetPeerId, connection.connectionState, event)
     }
@@ -105,7 +114,7 @@ function setUpWebRtcConnection(targetPeerId, isOffering, connId) {
     }
 
     dataChannel.onopen = (event) => {
-        console.log('dataChannel.onOpen', nodeId, targetPeerId, event)
+        debug('dataChannel.onOpen', nodeId, targetPeerId, event)
         peers[connId].readyChannels.add(dataChannel)
     }
 
