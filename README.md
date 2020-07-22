@@ -1,3 +1,8 @@
+# Info
+
+This branch can be used to run a signaller server + 2 or more processes that only for m connections to other processes.
+It can also be used for remote testing between multiple machines.
+
 ## How to install
 
 ```
@@ -21,12 +26,25 @@ node node.js --node-id 2
 node node.js --node-id 3
 ```
 
-## Run signaller + n amount of nodes
+## Running
 
-It is possible to run a signaller and n amount of nodes using the run.js script
+To run a experiment locally open up to terminals.
+
+On the other terminal enter:
 
 ```
-node run.js --nodes 50 
+node dual_machine/run.js --id first --runSignaller y --nodes 5
 ```
 
-All of the nodes will be running via a single run time with centralised logging.
+This runs a signaller + 5 connections that have a primary id of "first". The primary ID is used by the signaller to
+makes sure that connections are only formed between peers of separate processes.
+
+On the second terminal run:
+
+```
+node dual_machine/run.js --id second --nodes 5
+```
+
+You should now start seeing the nodes begin ICE. The node can be increased as much as the computer can handle but the
+connections do not seems to stay stable when there are above 32 peerConnections even if the connecitons are formed
+between two separate machines.
