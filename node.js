@@ -68,7 +68,7 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
     const connection = new nodeDataChannel.PeerConnection(nodeId, configuration);
 
     connection.onStateChange((state) => {
-        console.log(nodeId, "State:", targetPeerId, state);
+        console.log(nodeId, targetPeerId, "State:", state);
     });
     connection.onGatheringStateChange((state) => {
         console.log(nodeId, "GatheringState:", targetPeerId, state);
@@ -101,10 +101,16 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         const dataChannel = connection.createDataChannel("test")
         dataChannel.onOpen(() => {
             console.log("Datachannel opened", nodeId, targetPeerId)
-            readyChannels[targetPeerId] = dataChannel
         })
         dataChannel.onMessage((message) => {
             console.log(message)
+        })
+        dataChannel.onClosed(() => {
+            console.log("Datachannel closed", nodeId, targetPeerId)
+            delete dataChannels[targetPeerId]
+        })
+        dataChannel.onError((err) => {
+            console.error("Datachannel errored", nodeId, targetPeerId, error)
         })
         dataChannels[targetPeerId] = dataChannel
     }
@@ -113,7 +119,13 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         dataChannel.onMessage((message) => {
             console.log(message)
         })
-        readyChannels[targetPeerId] = dataChannel
+        dataChannel.onClosed(() => {
+            console.log("Datachannel closed", nodeId, targetPeerId)
+            delete dataChannels[targetPeerId]
+        })
+        dataChannel.onError((err) => {
+            console.error("Datachannel errored", nodeId, targetPeerId, error)
+        })
         dataChannels[targetPeerId] = dataChannel
     })
 
@@ -164,18 +176,21 @@ ws.on('open', () => {
     })
 
     setInterval(() => {
-        console.log(Object.keys(readyChannels).length)
-        Object.values(readyChannels).forEach((dataChannel) => {
-            const str = 'Hello from ' + nodeId
-            try {
-                dataChannel.sendMessage(JSON.stringify({
-                    str,
-                    time: Date.now()
-                }))
-            } catch (e) {
-                console.error(e)
+    //    console.log(Object.keys(readyChannels).length)
+        Object.values(dataChannels).forEach((dataChannel) => {
+            if (dataChannel.isOpen()) {
+                const str = 'Hello from ' + nodeId
+                try {
+                    dataChannel.sendMessage(JSON.stringify({
+                        str,
+                        time: Date.now()
+                    }))
+                } catch (e) {
+                    console.error(e)
+                }
+            } else {
+                console.log("DataChannel not open yet")
             }
-            
         })
     }, publishInterval)
 })
