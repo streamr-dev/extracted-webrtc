@@ -68,14 +68,14 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
     const connection = new nodeDataChannel.PeerConnection(nodeId, configuration);
 
     connection.onStateChange((state) => {
-        console.log(nodeId, "State:", state);
+        console.log(nodeId, "State:", targetPeerId, state);
     });
     connection.onGatheringStateChange((state) => {
-        console.log(nodeId, "GatheringState:", state);
+        console.log(nodeId, "GatheringState:", targetPeerId, state);
     });
 
     connection.onLocalDescription((description, type) => {
-        console.log(nodeId, "Description:", description);
+        console.log(nodeId, "Description:", targetPeerId);
         ws.send(JSON.stringify({
             source: nodeId,
             destination: targetPeerId,
@@ -86,7 +86,7 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
     })
 
     connection.onLocalCandidate((candidate, mid) => {
-        console.log(nodeId, "Candidate:", candidate, mid);
+        console.log(nodeId, "Candidate:", targetPeerId, mid);
         ws.send(JSON.stringify({
             source: nodeId,
             destination: targetPeerId,
@@ -100,8 +100,8 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         console.log('Starting dataChannel')
         const dataChannel = connection.createDataChannel("test")
         dataChannel.onOpen(() => {
-            console.log("Datachannel opened", nodeId)
-            readyChannels[nodeId] = dataChannel
+            console.log("Datachannel opened", nodeId, targetPeerId)
+            readyChannels[targetPeerId] = dataChannel
         })
         dataChannel.onMessage((message) => {
             console.log(message)
@@ -109,11 +109,11 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         dataChannels[targetPeerId] = dataChannel
     }
     connection.onDataChannel((dataChannel) => {
-        console.log("Got dataChannel")
+        console.log("Got dataChannel", nodeId, targetPeerId)
         dataChannel.onMessage((message) => {
             console.log(message)
         })
-        readyChannels[nodeId] = dataChannel
+        readyChannels[targetPeerId] = dataChannel
         dataChannels[targetPeerId] = dataChannel
     })
 
@@ -164,6 +164,7 @@ ws.on('open', () => {
     })
 
     setInterval(() => {
+        console.log(Object.keys(readyChannels).length)
         Object.values(readyChannels).forEach((dataChannel) => {
             const str = 'Hello from ' + nodeId
             try {
