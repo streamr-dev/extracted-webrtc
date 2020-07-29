@@ -3,8 +3,10 @@ const fs = require('fs')
 const tmp = require('tmp')
 const WebSocket = require('ws')
 const createDebug = require('debug')
-const { RTCPeerConnection, RTCSessionDescription } = require('wrtc')
+// const { RTCPeerConnection, RTCSessionDescription } = require('wrtc')
+const nodeDataChannel = require('./node-datachannel/lib/index');
 const program = require('commander')
+const EventEmitter = require('events');
 
 const { logToFile } = require('./common')
 
@@ -52,16 +54,6 @@ const logFileStream = fs.createWriteStream(metricsFile, {
 const connections = {}
 const dataChannels = {}
 const readyChannels = new Set()
-let numOfMessagesReceived = 0
-let numOfBytesReceived = 0
-let numOfMessagesSent = 0
-let numOfBytesSent = 0
-let totalLatency = 0.0
-let lastReportedNumOfMessagesReceived = 0
-let lastReportedNumofBytesReceived = 0
-let lastReportedNumOfMessagesSent = 0
-let lastReportedNumofBytesSent = 0
-let lastReportedLatency = 0.0
 
 function setUpWebRtcConnection(targetPeerId, isOffering) {
     if (connections[targetPeerId]) {
@@ -72,70 +64,62 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
             urls: url
         }))
     }
-    const connection = new RTCPeerConnection(configuration)
-    const dataChannel = connection.createDataChannel('streamrDataChannel', {
-        id: 0,
-        negotiated: true
+
+    const connection = new nodeDataChannel.PeerConnection(nodeId, configuration);
+
+    connection.onStateChange((state) => {
+        console.log(nodeId, "State:", state);
+    });
+    connection.onGatheringStateChange((state) => {
+        console.log(nodeId, "GatheringState:", state);
+    });
+
+    connection.onLocalDescription((description, type) => {
+        console.log(nodeId, "Description:", description);
+        ws.send(JSON.stringify({
+            source: nodeId,
+            destination: targetPeerId,
+            type,
+            description
+        }))
+
     })
 
-    if (isOffering) {
-        connection.onnegotiationneeded = async () => {
-            /* if (connection.signalingState === 'closed') { // TODO: is this necessary?
-                return
-            }
-             */
-            const offer = await connection.createOffer()
-            await connection.setLocalDescription(offer)
-            ws.send(JSON.stringify({
-                source: nodeId,
-                destination: targetPeerId,
-                offer
-            }))
-        }
-    }
+    connection.onLocalCandidate((candidate, mid) => {
+        console.log(nodeId, "Candidate:", candidate, mid);
+        ws.send(JSON.stringify({
+            source: nodeId,
+            destination: targetPeerId,
+            type: 'candidate',
+            candidate,
+            mid
+        }))
+    });
 
-    connection.onicecandidate = (event) => {
-        if (event.candidate != null) {
-            ws.send(JSON.stringify({
-                source: nodeId,
-                destination: targetPeerId,
-                candidate: event.candidate
-            }))
-        }
+    if (isOffering) {
+        console.log('Starting dataChannel')
+        const dataChannel = connection.createDataChannel("test")
+        dataChannel.onOpen(() => {
+            console.log("Datachannel opened", nodeId)
+            readyChannels[nodeId] = dataChannel
+        })
+
+        dataChannel.onMessage((message) => {
+            console.log(message)
+        })
+        dataChannels[targetPeerId] = dataChannel
     }
-    connection.onconnectionstatechange = (event) => {
-        debug('onconnectionstatechange', nodeId, targetPeerId, connection.connectionState, event)
-    }
-    connection.onsignalingstatechange = (event) => {
-        debug('onsignalingstatechange', nodeId, targetPeerId, connection.connectionState, event)
-    }
-    connection.oniceconnectionstatechange = (event) => {
-        debug('oniceconnectionstatechange', nodeId, targetPeerId, event)
-    }
-    connection.onicegatheringstatechange = (event) => {
-        debug('onicegatheringstatechange', nodeId, targetPeerId, event)
-    }
-    dataChannel.onopen = (event) => {
-        debug('dataChannel.onOpen', nodeId, targetPeerId, event)
-        readyChannels.add(dataChannel)
-    }
-    dataChannel.onclose = (event) => {
-        debug('dataChannel.onClose', nodeId, targetPeerId, event)
-    }
-    dataChannel.onerror = (event) => {
-        debug('dataChannel.onError', nodeId, targetPeerId, event)
-        console.warn(event)
-    }
-    dataChannel.onmessage = (event) => {
-        debug('dataChannel.onmessage', nodeId, targetPeerId, event.data)
-        const object = JSON.parse(event.data)
-        numOfMessagesReceived += 1
-        numOfBytesReceived += event.data.length
-        totalLatency += Date.now() - object.time
-    }
+    connection.onDataChannel((dataChannel) => {
+        console.log("Got dataChannel")
+        dataChannel.onMessage((message) => {
+            console.log(message)
+        })
+
+        dataChannels[targetPeerId] = dataChannel
+        readyChannels[nodeId] = dataChannel
+    })
 
     connections[targetPeerId] = connection
-    dataChannels[targetPeerId] = dataChannel
 }
 
 function randomString(length) {
@@ -157,27 +141,21 @@ ws.on('open', () => {
         const { source, destination } = message
         if (message.connect) {
             setUpWebRtcConnection(message.connect, true)
-        } else if (message.offer) {
+        } else if (message.type === 'offer') {
+            console.log("Offering....")
             setUpWebRtcConnection(source, false)
-            const description = new RTCSessionDescription(message.offer)
-            await connections[source].setRemoteDescription(description)
-            const answer = await connections[source].createAnswer()
-            await connections[source].setLocalDescription(answer)
-            ws.send(JSON.stringify({
-                source: nodeId,
-                destination: source,
-                answer
-            }))
-        } else if (message.answer) {
+            await connections[source].setRemoteDescription(message.description, message.type)
+
+        } else if (message.type === 'answer') {
             if (connections[source]) {
-                const description = new RTCSessionDescription(message.answer)
-                await connections[source].setRemoteDescription(description)
+                console.log("Answering....")
+                await connections[source].setRemoteDescription(message.description, message.type)
             } else {
-                console.warn(`Unexpected RTC_ANSWER from ${source} with contents: ${message.answer}`)
+                console.warn(`Unexpected RTC_ANSWER from ${source} with contents: ${message.description}`)
             }
-        } else if (message.candidate) {
+        } else if (message.type === 'candidate') {
             if (connections[source]) {
-                await connections[source].addIceCandidate(message.candidate)
+                await connections[source].addRemoteCandidate(message.candidate, message.mid)
             } else {
                 console.warn(`Unexpected ICE_CANDIDATE from ${source} with contents: ${message.candidate}`)
             }
@@ -211,61 +189,3 @@ ws.on('close', () => {
     console.error('Connection to signaller dropped.')
     process.exit(1)
 })
-
-
-// setInterval(async () => {
-//     console.info('Total messages received %d (%d)',
-//         numOfMessagesReceived,
-//         numOfMessagesReceived - lastReportedNumOfMessagesReceived)
-//     console.info('Total bytes received %d (%s per second)',
-//         numOfBytesReceived,
-//         ((numOfBytesReceived - lastReportedNumofBytesReceived) / (reportInterval / 1000.0)).toFixed(2))
-//     console.info('Mean latency %s ms per message (%s ms per message)',
-//         (totalLatency / numOfMessagesReceived).toFixed(2),
-//         ((totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)).toFixed(2))
-//     console.info('Total messages sent %d (%d)',
-//         numOfMessagesSent,
-//         numOfMessagesSent - lastReportedNumOfMessagesSent)
-//     console.info('Total bytes sent %d (%s per second)',
-//         numOfBytesSent,
-//         ((numOfBytesSent - lastReportedNumOfMessagesSent) / (reportInterval / 1000.0)).toFixed(2))
-//     const connectionStats = await Promise.all(Object.values(connections).map((c) => c.getStats(null)))
-//     logFileStream.write(JSON.stringify({
-//         nodeId,
-//         timestamp: Date.now(),
-//         received: {
-//             totalMessages: numOfMessagesReceived,
-//             totalBytes: numOfBytesReceived,
-//             newMessages: numOfMessagesReceived - lastReportedNumOfMessagesReceived,
-//             newBytes: numOfBytesReceived - lastReportedNumofBytesReceived,
-//             totalMeanLatency: totalLatency / numOfMessagesReceived,
-//             newMeanLatency: (totalLatency - lastReportedLatency) / (numOfMessagesReceived - lastReportedNumOfMessagesReceived)
-//         },
-//         sent: {
-//             totalMessages: numOfMessagesSent,
-//             totalBytes: numOfBytesSent,
-//             newMessages: numOfMessagesSent - lastReportedNumOfMessagesSent,
-//             newBytes: numOfBytesSent - lastReportedNumofBytesSent,
-//         },
-//         neighbors: Object.keys(connections),
-//         connections: {
-//             total: Object.values(connections).length,
-//             connectionStates: Object.values(connections).map((c) => c.connectionState),
-//             iceConnectionStates: Object.values(connections).map((c) => c.iceConnectionState),
-//             iceGatheringStates: Object.values(connections).map((c) => c.iceGatheringState),
-//             signalingStates: Object.values(connections).map((c) => c.signalingState),
-//             stats: connectionStats,
-//         },
-//         dataChannels: {
-//             total: Object.values(dataChannels).length,
-//             readyStates: Object.values(dataChannels).map((d) => d.readyState),
-//             bufferedAmount: Object.values(dataChannels).map((d) => d.bufferedAmount)
-//         }
-//     }) + '\n')
-//
-//     lastReportedNumOfMessagesReceived = numOfMessagesReceived
-//     lastReportedNumofBytesReceived = numOfBytesReceived
-//     lastReportedNumOfMessagesSent = numOfMessagesSent
-//     lastReportedNumofBytesSent = numOfBytesSent
-//     lastReportedLatency = totalLatency
-// }, reportInterval)
