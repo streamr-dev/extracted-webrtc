@@ -4,7 +4,7 @@ const tmp = require('tmp')
 const WebSocket = require('ws')
 const createDebug = require('debug')
 // const { RTCPeerConnection, RTCSessionDescription } = require('wrtc')
-const nodeDataChannel = require('./node-datachannel/lib/index');
+const nodeDataChannel = require('node-datachannel');
 const program = require('commander')
 const EventEmitter = require('events');
 
@@ -103,7 +103,6 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
             console.log("Datachannel opened", nodeId)
             readyChannels[nodeId] = dataChannel
         })
-
         dataChannel.onMessage((message) => {
             console.log(message)
         })
@@ -114,9 +113,8 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         dataChannel.onMessage((message) => {
             console.log(message)
         })
-
-        dataChannels[targetPeerId] = dataChannel
         readyChannels[nodeId] = dataChannel
+        dataChannels[targetPeerId] = dataChannel
     })
 
     connections[targetPeerId] = connection
@@ -166,20 +164,17 @@ ws.on('open', () => {
     })
 
     setInterval(() => {
-        Object.values(dataChannels).forEach((dataChannel) => {
-            if (readyChannels.has(dataChannel)) {
-                const str = randomString(2048)
-                try {
-                    dataChannel.send(JSON.stringify({
-                        str,
-                        time: Date.now()
-                    }))
-                    numOfMessagesSent += 1
-                    numOfBytesSent += 1
-                } catch (e) {
-                    console.error(e)
-                }
+        Object.values(readyChannels).forEach((dataChannel) => {
+            const str = 'Hello from ' + nodeId
+            try {
+                dataChannel.sendMessage(JSON.stringify({
+                    str,
+                    time: Date.now()
+                }))
+            } catch (e) {
+                console.error(e)
             }
+            
         })
     }, publishInterval)
 })

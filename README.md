@@ -1,5 +1,8 @@
+This branch is for testing the [node-datachannel](https://github.com/murat-dogan/node-datachannel) library.
+
 ## How to install
 
+node-datachannel currently only works with Ubuntu 20
 ```
 npm ci
 ```
