@@ -68,14 +68,14 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
     const connection = new nodeDataChannel.PeerConnection(nodeId, configuration);
 
     connection.onStateChange((state) => {
-        console.log(nodeId, targetPeerId, "State:", state);
+        console.log(Date.now(), nodeId, targetPeerId, "State:", state);
     });
     connection.onGatheringStateChange((state) => {
-        console.log(nodeId, "GatheringState:", targetPeerId, state);
+        console.log(Date.now(), nodeId, "GatheringState:", targetPeerId, state);
     });
 
     connection.onLocalDescription((description, type) => {
-        console.log(nodeId, "Description:", targetPeerId);
+        console.log(Date.now(), nodeId, "Description:", targetPeerId);
         ws.send(JSON.stringify({
             source: nodeId,
             destination: targetPeerId,
@@ -86,7 +86,7 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
     })
 
     connection.onLocalCandidate((candidate, mid) => {
-        console.log(nodeId, "Candidate:", targetPeerId, mid);
+        console.log(Date.now(), nodeId, "Candidate:", targetPeerId, mid);
         ws.send(JSON.stringify({
             source: nodeId,
             destination: targetPeerId,
@@ -100,31 +100,31 @@ function setUpWebRtcConnection(targetPeerId, isOffering) {
         console.log('Starting dataChannel')
         const dataChannel = connection.createDataChannel("test")
         dataChannel.onOpen(() => {
-            console.log("Datachannel opened", nodeId, targetPeerId)
+            console.log(Date.now(), "Datachannel opened", nodeId, targetPeerId)
         })
         dataChannel.onMessage((message) => {
             console.log(message)
         })
         dataChannel.onClosed(() => {
-            console.log("Datachannel closed", nodeId, targetPeerId)
+            console.log(Date.now(), "Datachannel closed", nodeId, targetPeerId)
             delete dataChannels[targetPeerId]
         })
         dataChannel.onError((err) => {
-            console.error("Datachannel errored", nodeId, targetPeerId, error)
+            console.error(Date.now(), "Datachannel errored", nodeId, targetPeerId, error)
         })
         dataChannels[targetPeerId] = dataChannel
     }
     connection.onDataChannel((dataChannel) => {
-        console.log("Got dataChannel", nodeId, targetPeerId)
+        console.log(Date.now(), "Got dataChannel", nodeId, targetPeerId)
         dataChannel.onMessage((message) => {
             console.log(message)
         })
         dataChannel.onClosed(() => {
-            console.log("Datachannel closed", nodeId, targetPeerId)
+            console.log(Date.now(), "Datachannel closed", nodeId, targetPeerId)
             delete dataChannels[targetPeerId]
         })
         dataChannel.onError((err) => {
-            console.error("Datachannel errored", nodeId, targetPeerId, error)
+            console.error(Date.now(), "Datachannel errored", nodeId, targetPeerId, error)
         })
         dataChannels[targetPeerId] = dataChannel
     })
